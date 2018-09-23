@@ -4,7 +4,9 @@ import numpy as np
 # Supress logger warning from gym.make() / Box class 
 gym.logger.set_level(40) 
 
-# Intialize global constants 
+# Intialize intervals for theta, and theta_dot 
+# To build 'boxes' for the state space 
+# There are 18 boxes 
 five_degrees = (5*np.pi)/180 
 one_degree = (np.pi)/180 
 fifty_rps = (50*np.pi)/180 
