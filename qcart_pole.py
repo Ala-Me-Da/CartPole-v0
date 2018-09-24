@@ -29,7 +29,7 @@ state = 0
 env = gym.make('CartPole-v0') 
 env.reset()
 
-# State-Action Pairs / Q-table. 
+# State-Action Pairs / Q-table
 # Only using theta and theta_dot 
 Q = np.zeros([state_space_size, action_space.size])  
 
