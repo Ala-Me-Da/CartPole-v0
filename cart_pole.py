@@ -1,4 +1,5 @@
 import gym 
+
 gym.logger.set_level(40) # Suppresses warnings 
 
 env = gym.make('CartPole-v0')  
