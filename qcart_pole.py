@@ -1,12 +1,12 @@
 import gym  
 import numpy as np   
 
-# Supress logger warning from gym.make() / Box class 
+# Supress logger warning from using gym.make() / Box class 
 gym.logger.set_level(40) 
 
 # Intialize intervals for theta, and theta_dot 
 # To build 'boxes' for the state space 
-# There are 18 boxes 
+# There are 18 total boxes or elements in the state space 
 five_degrees = (5*np.pi)/180 
 one_degree = (np.pi)/180 
 fifty_rps = (50*np.pi)/180 
@@ -29,7 +29,7 @@ state = 0
 env = gym.make('CartPole-v0') 
 env.reset()
 
-# State-Action Pairs / Q-table. Note indexing is Q[col, row]
+# State-Action Pairs / Q-table. 
 # Only using theta and theta_dot 
 Q = np.zeros([state_space_size, action_space.size])  
 
@@ -40,7 +40,7 @@ def get_state(obs):
 	theta = obs[2] 
 	theta_dot = obs[3] 
  	
-	# Threshold/Discretization for theta. 
+	# Discretization for theta. 
 	if(theta < -five_degrees):  pass 
 	elif(theta < -one_degree):  s = 1
 	elif(theta < 0): 	    s = 2 
@@ -48,12 +48,14 @@ def get_state(obs):
 	elif(theta < five_degrees): s = 4 
 	else: 			     s = 5 
 	
-	# Threshold/Discretization for theta_dot. 
+	# Discretization for theta_dot. 
 	if(theta_dot < -fifty_rps):  pass 
 	elif(theta_dot < fifty_rps): s += 6
 	else: 		             s += 7 	
 
-# Q-Learning too solve Cart Pole problem. 
+# Q-Learning to solve Cart Pole problem. 
+# Tabular Q-Learning with Temporal Difference Learning. 
+# learning rate decay in order to ensure faster convergence. 
 for episode in range(n_episodes): 
 	for iteration in range(n_iterations):
 		action = np.random.choice(action_space)
@@ -75,12 +77,3 @@ for _ in range(n_episodes):
 		env.render() 
 		s = sp 
 		if done: break
-
-print(Q) 
- 
-'''
-def get_reward(obs): 
-	max_theta = ((15)*np.pi / 180) 
-	min_theta = -max_theta 
-	return -1 if obs[2] > max_theta or obs[2] < min_theta else 1  
-''' 
