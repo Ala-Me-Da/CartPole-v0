@@ -1,79 +1,73 @@
-import gym  
-import numpy as np   
+import gym 
+import math 
+import numpy as np  
 
-# Supress logger warning from using gym.make() / Box class 
-gym.logger.set_level(40) 
-
-# Intialize intervals for theta, and theta_dot 
-# To build 'boxes' for the state space 
-# There are 18 total boxes or elements in the state space 
-five_degrees = (5*np.pi)/180 
-one_degree = (np.pi)/180 
-fifty_rps = (50*np.pi)/180 
-state_space_size = 18 
+# Supress logger warning from gym.make() / Box class 
+gym.logger.set_level(40)
 
 # Intialize hyperparameters. In order, these are: 
-# alpha, gamma, number of episodes, horizon(?) 
-learning_rate0 = 0.05
-learning_rate_decay = 0.1
-discount_rate = 0.1  
-n_episodes = 175 
-n_iterations = 10000 
-
-# Intialize action space, and the start state. 
-# For the action space, move_left = 0 and move_right = 1  
-action_space = np.array([0, 1])
-state = 0 
+# min alpha, min epsilon gamma, number of episodes) 
+min_alpha = 0.1 
+min_epsilon = 0.1 
+gamma = 1.0 
+n_episodes = 10000
+buckets = (1,1,6,12,)
 
 # Create Cart Pole environment & intialize observations  
-env = gym.make('CartPole-v0') 
-env.reset()
+env = gym.make('CartPole-v0')
+# env.reset()
 
-# State-Action Pairs / Q-table
+# State-Action Pairs / Q-table. Note indexing is Q[col, row]
 # Only using theta and theta_dot 
-Q = np.zeros([state_space_size, action_space.size])  
+# Creates 5 dimensional  np.ndarray of shape (1, 1, 6, 12, 2)
+# Note for later: Changes this to a 72 x 2 matrix instead and figure out how to work with that. 
 
-# We obtain state_space from the observation_space 
-# obs[2] is theta, obs[3] is theta_dot  
-def get_state(obs): 
-	s = 0
-	theta = obs[2] 
-	theta_dot = obs[3] 
- 	
-	# Discretization for theta. 
-	if(theta < -five_degrees):  pass 
-	elif(theta < -one_degree):  s = 1
-	elif(theta < 0): 	    s = 2 
-	elif(theta < one_degree):   s = 3 
-	elif(theta < five_degrees): s = 4 
-	else: 			     s = 5 
-	
-	# Discretization for theta_dot. 
-	if(theta_dot < -fifty_rps):  pass 
-	elif(theta_dot < fifty_rps): s += 6
-	else: 		             s += 7 	
+Q = np.zeros(buckets + (env.action_space.n,))
 
-# Q-Learning to solve Cart Pole problem. 
-# Tabular Q-Learning with Temporal Difference Learning. 
-# learning rate decay in order to ensure faster convergence. 
-for episode in range(n_episodes): 
-	for iteration in range(n_iterations):
-		action = np.random.choice(action_space)
-		obs_new, reward, done, _ = env.step(action)
-		state_new = get_state(obs_new)
-		learning_rate = learning_rate0 / (1 + iteration*learning_rate_decay)    
-		Q[state, action] = (1 - learning_rate)*Q[state,action] + learning_rate * (reward + discount_rate*np.max(Q[state_new])) 
-		state = state_new 
-		if done: break 
+# 3 functions inspired by n1try's solution
+ 
+def get_alpha(value): 
+	return max(min_alpha, min(1.0, 1.0 - math.log10((value + 1) / 25))) 
 
-# Display the learning results
-s = 0
-for _ in range(n_episodes):
-	env.reset()  
-	for _ in range(n_iterations): 
-		action = np.argmax(Q[s, :]) 
-		obs_new, _, done, _ = env.step(action) 
-		sp = get_state(obs_new) 	
-		env.render() 
-		s = sp 
-		if done: break
+def get_epsilon(value): 
+	return max(min_epsilon, min(1, 1.0 - math.log10((value + 1) / 25))) 
+
+def get_state(obs):
+	upper_bounds = [env.observation_space.high[0], 0.5, env.observation_space.high[2], math.radians(50)] 
+	lower_bounds = [env.observation_space.low[0], -0.5, env.observation_space.low[2], -math.radians(50)] 
+	ratios = np.multiply(obs + np.abs(lower_bounds), np.divide(1, np.subtract(upper_bounds, lower_bounds)))
+	new_obs = (np.around(np.subtract(buckets, 1)*ratios)).astype(int) 
+	new_obs = np.minimum(np.subtract(buckets, 1), np.maximum(0, new_obs))
+	return tuple(new_obs)
+
+# 3 functions inspired by n1try's solution 
+
+# array holding total reward per episode 
+totalReward = np.zeros([n_episodes , 1]) 
+for episode in range(n_episodes):
+	# Reset environment and get first new state 
+	state = get_state(env.reset()) 
+	alpha = get_alpha(episode)
+	epsilon = get_epsilon(episode)
+	done = False 
+	# Tabular Q-Learning algorithm with epislon-greedy 
+	while not done:
+		# Choose action via epislon-greedy  
+		if np.random.random() <= epsilon: 
+			action = env.action_space.sample() 
+		else: 
+			action = np.argmax(Q[state]) 
+		
+		# Get new observations, reward, and whether we're done from enviornment 
+		new_obs, reward, done, _ = env.step(action) 
+		new_state = get_state(new_obs) 
+
+		# Update Q-table 
+		Q[state][action] += alpha*(reward + gamma * np.max(Q[new_state]) - Q[state][action])  
+		
+		# Count total reward and update state 
+		totalReward[episode] += 1 
+		state = new_state
+
+# print(totalReward) 	
+print("The average reward is {}".format(np.mean(totalReward)))
