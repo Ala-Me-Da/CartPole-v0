@@ -6,7 +6,7 @@ import numpy as np
 gym.logger.set_level(40)
 
 # Intialize hyperparameters. In order, these are: 
-# min alpha, min epsilon gamma, number of episodes
+# mininum alpha, mininum epsilon. gamma, and number of episodes
 # number of buckets per observation (x, x_dot, theta, theta_dot) 
 # stored in a tuple 
 min_alpha = 0.1 
